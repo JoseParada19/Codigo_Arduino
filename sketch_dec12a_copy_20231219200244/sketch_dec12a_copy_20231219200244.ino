@@ -1,0 +1,91 @@
+#include <ESP8266WiFi.h>
+#include <ThingSpeak.h>
+
+const char *ssid = "RedJose";         // Reemplaza con el nombre de tu red WiFi
+const char *password = "josesito"; // Reemplaza con la contraseña de tu red WiFi
+
+const int bombaPin1 = 13;
+const int bombaPin2 = 12;
+
+const int sensorHumedadPin = 5;
+const int umbralHumedad = 50;
+
+const int sensorLuzPin = A0; 
+const int umbralLuz = 170;
+
+// -------ThingSpeak---------
+char thingSpeakAddress[] = "api.thingspeak.com";
+unsigned long channelID = 2377846;
+const char *writeAPIKey = "X90JS4LNJF6XSSTL";
+
+WiFiClient client;
+
+void setup() {
+  pinMode(bombaPin1, OUTPUT);
+  pinMode(bombaPin2, OUTPUT);
+  pinMode(sensorHumedadPin, INPUT);
+  pinMode(sensorLuzPin, INPUT);
+  Serial.begin(9600);
+  digitalWrite(bombaPin1, LOW);
+  digitalWrite(bombaPin2, HIGH);
+
+  ThingSpeak.begin(client);  //ThingSpeak
+
+  // ----WiFi------
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(250);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.println("Conectado a WiFi");
+
+  delay(1000);
+}
+
+void loop() {
+  int valorHumedad = analogRead(sensorHumedadPin);
+
+  //----Lectura(LDR)----
+  int valorLuz = analogRead(sensorLuzPin);
+
+  Serial.print("Valor de Luz: ");
+  Serial.println(valorLuz);
+  Serial.print("Valor de Humedad: ");
+  Serial.println(valorHumedad);
+  if (valorLuz >= umbralLuz) {
+    Serial.println("Hay luz detectada");
+  } else {
+    Serial.println("No hay luz detectada");
+    Serial.print("Valor de Humedad: ");
+    Serial.println(valorHumedad);
+
+
+
+
+    // Compara con el umbral para detectar la humedad baja
+    //Si NO hay humedad y (ldr) es menor a 150 no corre:
+    if (valorHumedad == 1023 && valorLuz < umbralLuz) {
+      digitalWrite(bombaPin2, HIGH);
+      Serial.println("Bomba Encendida");
+      delay(5000);
+      digitalWrite(bombaPin2, LOW);
+      Serial.println("Bomba Apagada");
+      delay(1000);
+
+    } else {
+      digitalWrite(bombaPin2, LOW);  // Detiene la bomba si la humedad es alta
+      delay(1000);
+    }
+  }
+
+  ThingSpeak.writeField(channelID, 3, valorLuz, writeAPIKey);
+  delay(1000);
+  ThingSpeak.writeField(channelID, 2, valorHumedad, writeAPIKey);
+  delay(1000);
+
+}
+
+
+
+
